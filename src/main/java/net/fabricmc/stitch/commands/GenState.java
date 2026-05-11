@@ -72,8 +72,8 @@ class GenState {
 	private final MemoryMappingTree mappingTree = new MemoryMappingTree();
 	private final Map<IntermediaryType, Integer> counters = new HashMap<>();
 	private final Map<AbstractJarEntry, Integer> values = new IdentityHashMap<>();
-	private MappingFormat counterFileFormat = MappingFormat.TINY;
-	private MappingFormat mappingFileFormat = MappingFormat.TINY;
+	private MappingFormat counterFileFormat = MappingFormat.TINY_2_FILE;
+	private MappingFormat mappingFileFormat = MappingFormat.TINY_2_FILE;
 	private GenMap oldToIntermediary, newToOld;
 	private boolean targetFileMappingsPresent;
 	private boolean interactive = true;
@@ -130,9 +130,9 @@ class GenState {
 
 		do {
 			removedAny = false;
-			removedAny |= mappingTree.removeMetadata("next-intermediary-class") != null;
-			removedAny |= mappingTree.removeMetadata("next-intermediary-field") != null;
-			removedAny |= mappingTree.removeMetadata("next-intermediary-method") != null;
+			removedAny |= mappingTree.removeMetadata("next-intermediary-class") != false;
+			removedAny |= mappingTree.removeMetadata("next-intermediary-field") != false;
+			removedAny |= mappingTree.removeMetadata("next-intermediary-method") != false;
 		} while (removedAny);
 	}
 
@@ -628,14 +628,19 @@ class GenState {
 		}
 	}
 
+	private String getMetadataValue(MappingTree tree, String key) {
+		List<? extends MappingTree.MetadataEntry> entries = tree.getMetadata(key);
+		return entries.isEmpty() ? null : entries.get(0).getValue();
+	}
+
 	private void readCountersFromTree(MappingTree tree) {
-		String counter = tree.getMetadata("next-intermediary-class");
+		String counter = getMetadataValue(tree, "next-intermediary-class");
 		if (counter != null) counters.put(IntermediaryType.CLASS, Integer.parseInt(counter));
 
-		counter = tree.getMetadata("next-intermediary-field");
+		counter = getMetadataValue(tree, "next-intermediary-field");
 		if (counter != null) counters.put(IntermediaryType.FIELD, Integer.parseInt(counter));
 
-		counter = tree.getMetadata("next-intermediary-method");
+		counter = getMetadataValue(tree, "next-intermediary-method");
 		if (counter != null) counters.put(IntermediaryType.METHOD, Integer.parseInt(counter));
 	}
 
