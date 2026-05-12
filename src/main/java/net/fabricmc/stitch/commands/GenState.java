@@ -514,8 +514,11 @@ class GenState {
 		MemoryMappingTree mappingTree = new MemoryMappingTree();
 		mappingTree.visitNamespaces(official, Arrays.asList(intermediary));
 
+		String mappedClassName = prefix + cName;
+		anyIntermediaries |= !mappedClassName.equals(c.getFullyQualifiedName());
+
 		mappingTree.visitClass(c.getFullyQualifiedName());
-		mappingTree.visitDstName(MappedElementKind.CLASS, intermediaryIndex, prefix + cName);
+		mappingTree.visitDstName(MappedElementKind.CLASS, intermediaryIndex, mappedClassName);
 
 		for (JarFieldEntry f : c.getFields()) {
 			String fName = getFieldName(storage, c, f);
