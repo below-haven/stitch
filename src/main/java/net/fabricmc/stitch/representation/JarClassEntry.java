@@ -45,6 +45,7 @@ public class JarClassEntry extends AbstractJarEntry {
 	List<String> interfaces;
 	List<String> subclasses;
 	List<String> implementers;
+	boolean classFilePresent;
 
 	protected JarClassEntry(String name, String fullyQualifiedName) {
 		super(name);
@@ -60,6 +61,7 @@ public class JarClassEntry extends AbstractJarEntry {
 	}
 
 	protected void populate(int access, String signature, String superclass, String[] interfaces) {
+		this.classFilePresent = true;
 		this.setAccess(access);
 		this.signature = signature;
 		this.superclass = superclass;
@@ -159,6 +161,10 @@ public class JarClassEntry extends AbstractJarEntry {
 
 	public Collection<JarMethodEntry> getMethods() {
 		return methods.values();
+	}
+
+	public boolean isClassFilePresent() {
+		return classFilePresent;
 	}
 
 	public boolean isInterface() {

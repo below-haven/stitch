@@ -26,6 +26,7 @@ import net.fabricmc.stitch.commands.CommandGeneratePrefixRemapper;
 import net.fabricmc.stitch.commands.CommandMatcherToTiny;
 import net.fabricmc.stitch.commands.CommandMergeJar;
 import net.fabricmc.stitch.commands.CommandRewriteIntermediary;
+import net.fabricmc.stitch.commands.CommandValidateMappings;
 import net.fabricmc.stitch.commands.CommandUpdateIntermediary;
 import net.fabricmc.stitch.commands.CommandValidateRecords;
 import net.fabricmc.stitch.plugin.PluginLoader;
@@ -45,6 +46,7 @@ public class Main {
 		addCommand(new CommandMergeJar());
 		addCommand(new CommandRewriteIntermediary());
 		addCommand(new CommandUpdateIntermediary());
+		addCommand(new CommandValidateMappings());
 		addCommand(new CommandValidateRecords());
 	}
 

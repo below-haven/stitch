@@ -189,6 +189,8 @@ class GenState {
 			}
 		}
 
+		removeNonRealClasses(jarEntry);
+
 		writeCounters();
 		mappingTree.visitEnd();
 
@@ -457,6 +459,86 @@ class GenState {
 		return next(m, IntermediaryType.METHOD);
 	}
 
+	@Nullable
+	private String getExistingClassName(JarClassEntry c) {
+		Object existingMapping = mappingTree.getClass(c.getFullyQualifiedName());
+		String existingName = null;
+
+		// Check for existing name from target file
+		if (existingMapping != null) {
+			existingName = ((ClassMapping) existingMapping).getDstName(intermediaryIndex);
+		}
+
+		// Check for existing name from supplied old mappings file
+		if (existingName == null
+				&& newToOld != null
+				&& (existingMapping = newToOld.getClass(c.getFullyQualifiedName())) != null) {
+			existingName = oldToIntermediary.getClass((String) existingMapping);
+		}
+
+		return existingName;
+	}
+
+	@Nullable
+	private String getExistingVirtualClassName(JarClassEntry c) {
+		Set<String> names = new HashSet<>();
+		collectExistingVirtualClassNames(c, c.getFullyQualifiedName(), names);
+
+		return names.size() == 1 ? names.iterator().next() : null;
+	}
+
+	private void collectExistingVirtualClassNames(JarClassEntry c, String baseName, Set<String> names) {
+		for (JarClassEntry cc : c.getInnerClasses()) {
+			String existingName = getExistingClassName(cc);
+
+			if (existingName != null) {
+				String virtualName = getVirtualClassName(baseName, cc.getFullyQualifiedName(), existingName);
+
+				if (virtualName != null) {
+					names.add(virtualName);
+				}
+			}
+
+			collectExistingVirtualClassNames(cc, baseName, names);
+		}
+	}
+
+	@Nullable
+	private String getVirtualClassName(String baseName, String className, String mappedClassName) {
+		int suffixCount = 0;
+		String suffix = className.substring(baseName.length());
+
+		for (int i = 0; i < suffix.length(); i++) {
+			if (suffix.charAt(i) == '$') {
+				suffixCount++;
+			}
+		}
+
+		String ret = mappedClassName;
+
+		for (int i = 0; i < suffixCount; i++) {
+			int pos = ret.lastIndexOf('$');
+
+			if (pos < 0) {
+				return null;
+			}
+
+			ret = ret.substring(0, pos);
+		}
+
+		return ret;
+	}
+
+	private void removeNonRealClasses(ClassStorage storage) {
+		for (ClassMapping cls : new ArrayList<>(mappingTree.getClasses())) {
+			JarClassEntry entry = storage.getClass(cls.getSrcName(), false);
+
+			if (entry == null || !entry.isClassFilePresent()) {
+				mappingTree.removeClass(cls.getSrcName());
+			}
+		}
+	}
+
 	private MappingTree addClass(JarClassEntry c, ClassStorage storageOld, ClassStorage storage, String prefix) throws IOException {
 		String cName = "";
 		String origPrefix = prefix;
@@ -468,19 +550,10 @@ class GenState {
 			cName = null;
 
 			if (newToOld != null || targetFileMappingsPresent) {
-				Object existingMapping = mappingTree.getClass(c.getFullyQualifiedName());
-				String existingName = null;
+				String existingName = getExistingClassName(c);
 
-				// Check for existing name from target file
-				if (existingMapping != null) {
-					existingName = ((ClassMapping) existingMapping).getDstName(intermediaryIndex);
-				}
-
-				// Check for existing name from supplied old mappings file
-				if (existingName == null
-						&& newToOld != null
-						&& (existingMapping = newToOld.getClass(c.getFullyQualifiedName())) != null) {
-					existingName = oldToIntermediary.getClass((String) existingMapping);
+				if (existingName == null && !c.isClassFilePresent()) {
+					existingName = getExistingVirtualClassName(c);
 				}
 
 				if (existingName != null) {
@@ -515,10 +588,13 @@ class GenState {
 		mappingTree.visitNamespaces(official, Arrays.asList(intermediary));
 
 		String mappedClassName = prefix + cName;
-		anyIntermediaries |= !mappedClassName.equals(c.getFullyQualifiedName());
 
-		mappingTree.visitClass(c.getFullyQualifiedName());
-		mappingTree.visitDstName(MappedElementKind.CLASS, intermediaryIndex, mappedClassName);
+		if (c.isClassFilePresent()) {
+			anyIntermediaries |= !mappedClassName.equals(c.getFullyQualifiedName());
+
+			mappingTree.visitClass(c.getFullyQualifiedName());
+			mappingTree.visitDstName(MappedElementKind.CLASS, intermediaryIndex, mappedClassName);
+		}
 
 		for (JarFieldEntry f : c.getFields()) {
 			String fName = getFieldName(storage, c, f);
