@@ -130,9 +130,9 @@ class GenState {
 
 		do {
 			removedAny = false;
-			removedAny |= mappingTree.removeMetadata("next-intermediary-class") != false;
-			removedAny |= mappingTree.removeMetadata("next-intermediary-field") != false;
-			removedAny |= mappingTree.removeMetadata("next-intermediary-method") != false;
+			removedAny |= mappingTree.removeMetadata("next-intermediary-class");
+			removedAny |= mappingTree.removeMetadata("next-intermediary-field");
+			removedAny |= mappingTree.removeMetadata("next-intermediary-method");
 		} while (removedAny);
 	}
 
@@ -578,6 +578,8 @@ class GenState {
 				MatcherUtil.read(reader, true, newToOld::addClass, newToOld::addField, newToOld::addMethod);
 			}
 		}
+
+		newToOld.inferOuterClasses();
 	}
 
 	private MappingTree readOldMappings(File oldMappings) throws IOException {

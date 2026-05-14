@@ -17,7 +17,9 @@
 package net.fabricmc.stitch.commands;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 
 import org.jetbrains.annotations.Nullable;
@@ -47,6 +49,47 @@ public class GenMap {
 
 	public void addClass(String from, String to) {
 		map.put(from, new Class(to));
+	}
+
+	public void inferOuterClasses() {
+		Map<String, String> inferredClasses = new HashMap<>();
+		Set<String> conflictingClasses = new HashSet<>();
+
+		for (Map.Entry<String, Class> entry : map.entrySet()) {
+			String from = entry.getKey();
+			String to = entry.getValue().name;
+
+			while (true) {
+				from = getOuterName(from);
+				to = getOuterName(to);
+
+				if (from == null || to == null) {
+					break;
+				}
+
+				if (map.containsKey(from)) {
+					continue;
+				}
+
+				String previous = inferredClasses.putIfAbsent(from, to);
+
+				if (previous != null && !previous.equals(to)) {
+					conflictingClasses.add(from);
+				}
+			}
+		}
+
+		for (Map.Entry<String, String> entry : inferredClasses.entrySet()) {
+			if (!conflictingClasses.contains(entry.getKey())) {
+				map.putIfAbsent(entry.getKey(), new Class(entry.getValue()));
+			}
+		}
+	}
+
+	private static String getOuterName(String name) {
+		int pos = name.lastIndexOf('$');
+
+		return pos > 0 ? name.substring(0, pos) : null;
 	}
 
 	public void addField(EntryTriple from, EntryTriple to) {
